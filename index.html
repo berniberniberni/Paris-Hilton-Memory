@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Color Memory</title>
+    <style>
+        h1{
+            color: rgb(235, 0, 204);
+            text-align: center;
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        }
+
+        h2#result{
+            color: plum;
+            text-align: center;
+            font-size: 24px;
+        }
+        button {
+            color:rgb(235, 0, 204);
+            display: block;
+            margin: 20px auto; 
+        }
+        table {
+            margin: 0 auto;
+        }
+
+        td {
+            border: 1px solid black;
+            width: 200px;
+            height: 200px;
+            z-index: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        td img {
+            display: block;
+            width: 100%; 
+            height: 100%;
+            object-fit: cover;
+            margin: 0;
+            padding: 0; 
+            z-index: 10;
+        }
+
+        tr {
+            border: 1px solid black;
+        }
+
+        table {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+    </style>
+</head>
+
+<body style="background-color:whitesmoke" onload="buildGame();">
+    <!-- Insert the basic DOM Elements, that you want to use, h2-Header, table...-->
+    <h1>Paris Hilton Memory</h1>
+    <table id="Field"></table><br>
+    <h2 id="result"></h2><br>
+    <button id="refreshButton" onclick="resetGame()">Play Again.</button>
+    <script>
+            let firstPick = null; 
+            let secondPick = null;
+            let matches = 0; 
+            let giphyImages = []; 
+
+            async function buildGame() {
+
+            // playfield size
+            var sx = 2; //rows
+            var sy = 4; //columns
+            var img_count = sx * sy / 2; //color matches
+
+            /*const cols = generateHslaColors(50, 40, 1.0, img_count).concat(
+                generateHslaColors(50,40,1.0, img_count)
+            );
+             shuffleArray(cols); //mix 
+            const table = document.getElementById("Field"); //get DOM field
+            let colorIndex = 0; */
+
+            giphyImages = await fetchGiphyimages("Paris Hilton", img_count);
+            if (!giphyImages.length){
+                document.getElementById("result").textContent = "Error fetching images. Try again.";
+                return;
+            }
+
+            const images = [...giphyImages, ...giphyImages];
+            shuffleArray(images);
+
+            const table = document.getElementById("Field");
+            table.innerHTML = ""; //clear table
+
+            let imgIndex = 0; 
+            for (let i = 0; i < sx; i++){
+                const row = document.createElement("tr");
+
+                for (let j = 0; j < sy; j++){
+                const cell = document.createElement("td");
+                const img = document.createElement("img");
+                img.src = images [imgIndex];
+                img.alt = "Giphy Image";
+                img.style.display = "none"; //hidden 
+                cell.appendChild(img);
+
+                cell.onclick = () => handleTileCheck(cell);
+                row.appendChild(cell);
+                imgIndex++;
+                }
+            table.appendChild(row);
+            }
+        }
+
+            /*for(let i = 0; i <sx; i++){
+                    const row = document.createElement("tr"); //row
+
+                    for(let j= 0; j< sy; j++){
+                    const cell = document.createElement("td"); //cell
+                    cell.dataset.color = cols[colorIndex];
+                    cell.style.backgroundColor = "gray";
+                    cell.onclick = () => handleTileCheck(cell);
+                    row.appendChild(cell);
+                    colorIndex++;
+                }
+                table.appendChild(row); //append row to table
+            }
+        }
+        let firstPick = null;
+        let secondPick = null;
+        let matches = 0;   */ 
+
+        function handleTileCheck(cell){
+            if(cell.classList.contains("revealed") || secondPick){
+                return;
+            }
+            revealTile(cell);
+
+            if(!firstPick){
+                firstPick=cell;
+            } else {
+                secondPick=cell;
+                checkMatch();
+            }
+        }
+
+        /*function revealTile(cell){
+            cell.style.backgroundColor = cell.dataset.color; //show color 
+            cell.classList.add("revealed"); //mark as revealed 
+        } */ 
+       function revealTile(cell){
+        const img = cell.querySelector("img");
+        img.style.display = "block";
+        cell.classList.add("revealed");
+       }
+
+        /*function hideTile(cell){
+            cell.style.backgroundColor = "gray"; //hide
+            cell.classList.remove("revealed"); //mark as not revealed aka hidden
+        }*/ 
+
+        function hideTile(cell){
+        const img = cell.querySelector("img");
+        img.style.display = "none";
+        cell.classList.remove("revealed"); //mark as hidden
+       }
+
+        /*function checkMatch(){
+            if(firstPick.dataset.color === secondPick.dataset.color){
+                matches++;
+                firstPick = null;
+                secondPick = null; 
+
+                if (matches === 4){ 
+                    document.getElementById("result").textContent = "You won!";
+                }
+            } else {
+                setTimeout(() => {
+                    hideTile(firstPick);
+                    hideTile(secondPick);
+                    firstPick = null;
+                    secondPick = null; 
+                }, 1000);
+            }
+        }*/ 
+       function checkMatch(){
+            const img1 = firstPick.querySelector("img").src;
+            const img2 = secondPick.querySelector("img").src;
+
+
+            if(img1 === img2){
+                matches++;
+                firstPick = null;
+                secondPick = null; 
+
+                if (matches === giphyImages.length){ 
+                    document.getElementById("result").textContent = "Thats hot! You won!";
+                }
+            } else {
+                setTimeout(() => {
+                    hideTile(firstPick);
+                    hideTile(secondPick);
+                    firstPick = null;
+                    secondPick = null; 
+                }, 1000);
+            }
+        }
+
+        function shuffleArray(array){
+            for (let i = array.length - 1; i > 0; i--){
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // from https://mika-s.github.io/javascript/colors/hsl/2017/12/05/generating-random-colors-in-javascript.html
+        /*function generateHslaColors(saturation, lightness, alpha, amount) {
+            var colors = [];
+            var huedelta = Math.trunc(360 / amount);
+
+            for (var i = 0; i < amount; i++) {
+                var hue = i * huedelta;
+                colors.push("hsla(" + hue + ", "+ saturation  +"%," + lightness +"%," + alpha+")");
+            }
+
+            return colors;
+        }*/
+       async function fetchGiphyimages(query, limit) {
+        const apiKey = "WdxR3HE2TsDGKT2hmButkER3yiqHwWLh";
+        const safeString = encodeURIComponent(query);
+        const url = `https://api.giphy.com/v1/gifs/search?api_key=WdxR3HE2TsDGKT2hmButkER3yiqHwWLh&q=${safeString}&rating=G&limit=${limit}`;
+
+        try{
+            const response = await fetch(url);
+            if (!response.ok){
+                    throw new Error(`HTTP error Status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.data.map( gif => gif.images.original.url);
+        } catch (error){
+            console.error("Error fetching GIPHY images:", error);
+            return [];
+        } 
+        
+       }
+
+        function resetGame(){
+            const table = document.getElementById("Field");
+            table.innerHTML = "";
+            document.getElementById("result").textContent="";
+            firstPick = null;
+            secondPick = null;
+            matches = 0;
+            buildGame();
+        }
+
+    </script>
+</body>
+
+</html>
